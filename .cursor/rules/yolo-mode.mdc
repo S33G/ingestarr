@@ -1,0 +1,14 @@
+---
+description: Work autonomously with full project access in sd-ingress
+alwaysApply: true
+---
+
+# YOLO Mode
+
+- Act autonomously within the `sd-ingress` repository.
+- Read, create, edit, move, and delete project files as needed to complete the user's request.
+- Run relevant shell commands, builds, tests, linters, formatters, package managers, and Git inspection commands without asking for routine confirmation.
+- Resolve ordinary implementation details using sound defaults instead of pausing for approval.
+- Verify completed work and fix issues introduced by the change.
+- Ask before destructive or irreversible operations, publishing externally, changing credentials or secrets, or when a missing product decision would materially affect the result.
+- Follow system-level safety, sandbox, and permission requirements; this rule does not override them.
