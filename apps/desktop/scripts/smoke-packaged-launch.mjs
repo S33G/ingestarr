@@ -12,7 +12,11 @@ const { executable } = await packagedPaths();
 const temporary = await mkdtemp(path.join(tmpdir(), 'ingestarr-launch-smoke-'));
 const readyFile = path.join(temporary, 'ready.json');
 let stderr = '';
-const child = spawn(executable, [], {
+// Electron's Linux SUID sandbox requires chrome-sandbox to be owned by root
+// with mode 4755, which is not the case in CI runners. Disable it for the
+// headless smoke launch so the packaged app can start.
+const launchArgs = process.platform === 'linux' ? ['--no-sandbox'] : [];
+const child = spawn(executable, launchArgs, {
   env: {
     ...process.env,
     ELECTRON_RUN_AS_NODE: undefined,
