@@ -35,7 +35,15 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerZIP({}, ['darwin']),
-    new MakerSquirrel({}),
+    // The desktop package name is scoped (@ingestarr/desktop) and declares no
+    // author. Squirrel/NuGet reject the `@` and `/` in the package id and an
+    // empty <authors>, so provide clean, explicit metadata here.
+    new MakerSquirrel({
+      name: 'ingestarr',
+      authors: 'Ingestarr Project',
+      description:
+        'Local-first desktop app for safely ingesting media from cameras and SD cards.',
+    }),
     // electron-installer-debian requires a maintainer and homepage; without them (the desktop
     // package.json declares no `author`/`homepage`) the Linux `make` fails. Provide them here.
     new MakerDeb({

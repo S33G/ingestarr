@@ -108,3 +108,38 @@ jobs:
             apps/desktop/out/make/**
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: Attach installers to latest release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Upload installers to the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName')"
+          if [ -z "$tag" ]; then
+            echo "No published release found; skipping artifact attachment."
+            exit 0
+          fi
+          echo "Latest release: $tag"
+          mapfile -t files < <(find artifacts -type f \
+            \( -name '*.exe' -o -name '*.nupkg' -o -name 'RELEASES' \
+               -o -name '*.zip' -o -name '*.deb' -o -name '*.rpm' \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No installer files found to upload."
+            exit 1
+          fi
+          printf 'Uploading:\n'; printf '  %s\n' "${files[@]}"
+          gh release upload "$tag" "${files[@]}" --clobber --repo "$GITHUB_REPOSITORY"
