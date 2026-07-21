@@ -41,6 +41,9 @@ const config: ForgeConfig = {
     new MakerDeb({
       options: {
         name: 'ingestarr',
+        // electron-installer-debian defaults `bin` to package.json `name` (@ingestarr/desktop),
+        // but Electron Packager names the Linux executable after packagerConfig.name.
+        bin: 'Ingestarr',
         productName: 'Ingestarr',
         genericName: 'Media Ingest',
         maintainer: 'Ingestarr Project',
