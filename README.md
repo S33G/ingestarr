@@ -1,120 +1,178 @@
 # Ingestarr
 
-## Bring your media home—safely.
+**Bring your media home — safely.**
 
-**Project status: Early stage.** Ingestarr is under active development and is not yet a supported
-production release.
+Ingestarr is a local-first desktop app for photographers, videographers, and anyone who moves
+irreplaceable media from SD cards, cameras, and folders. It reviews what is on a card before
+anything is copied, organizes files by capture date and source, skips media you have already
+verified, and independently checksums every byte that lands on disk.
 
-Ingestarr is a local-first desktop app for photographers, videographers, and other content
-creators who want a safer, more understandable way to move irreplaceable media from cameras, SD
-cards, and other folders.
+> **Early stage.** Ingestarr is under active development. There are no release downloads yet,
+> interfaces may change, and builds are unsigned. See [Project status](#project-status).
 
-Before anything is copied, Ingestarr reviews the source and previews where the media will go. It
-then organizes files by capture date and source, avoids copying files already recorded as verified,
-copies new media through temporary files, and independently verifies each copy.
+---
 
 ## Why Ingestarr?
 
-- **Transfer with confidence.** Review file counts, estimated size, source identity, and the
-  destination before starting.
-- **Keep the workflow local.** Source analysis, metadata extraction, copying, verification, and
-  catalog data stay on your computer.
-- **Build an organized archive.** Capture metadata places media into predictable
-  `year/date/source` folders while preserving original filenames.
-- **Repeat ingests safely.** Previously verified files can be recognized and skipped, while live
-  progress and per-file errors make each run understandable.
+| | |
+| --- | --- |
+| **Review before you copy** | See file counts, estimated size, source identity, and the destination layout before ingest starts. Select specific capture dates when you only want part of a card. |
+| **Cards, recognized** | Insert an SD card and Ingestarr detects it. Nickname a card once — the same physical card is never shown twice. |
+| **Verified, not guessed** | New files copy through a temporary path, get an independent SHA-256 hash, and are promoted only when source and destination match. Existing verified files are skipped. |
+| **Stays on your machine** | Scanning, metadata extraction, copying, verification, and catalog data all run locally. No cloud upload step. |
+| **Built to recover** | Sessions persist. Interrupted ingests can be resumed. Per-file errors are recorded instead of failing silently. |
 
-## Available today
-
-The current desktop workflow includes:
-
-- Source and destination folder selection with a review before ingest.
-- Source recognition plus classification of new, known, ambiguous, and recoverable files.
-- Photo and video metadata extraction, with safe filesystem or session-time fallbacks when capture
-  metadata is unavailable.
-- Capture-date and source-based destination organization.
-- Duplicate-aware decisions that skip files only when an earlier verified copy is recorded.
-- Temporary-file copying, independent SHA-256 hashes of source and destination, and no-replace
-  promotion of verified files.
-- Live file and byte progress, cancellation, persisted session records, and per-file error
-  reporting.
-- Date-grouped media summaries with photo, video, and source filters, paginated results, and
-  lazy-loaded thumbnails.
-- A sandboxed Electron renderer, a narrow typed preload API, runtime-validated IPC messages, and a
-  content security policy.
-
-## Planned
-
-These capabilities are represented in project contracts or product direction, but are not
-available through the current desktop workflow:
-
-- Configurable destination folder templates.
-- User-selectable collision policies such as prompt, skip, replace, and rename.
-- Richer source history and session recovery controls.
-- Configurable extension filters and broader format controls.
-- More creator-focused workflow and interface polish.
-
-Planned items are direction, not release commitments.
+---
 
 ## How it works
 
-1. **Review.** Choose a source and destination. Ingestarr scans the source, identifies familiar
-   files, extracts metadata, and shows what it expects to transfer.
-2. **Organize.** Each file receives a destination based on its capture date and source label, with a
-   safe fallback when capture metadata is missing.
-3. **Copy.** New or unresolved media is streamed into an exclusive temporary file. Files with a
-   durable verified copy are skipped.
-4. **Verify.** Ingestarr independently hashes the temporary copy with SHA-256, compares it with the
-   source hash, and only then promotes it without replacing an existing destination file.
+```mermaid
+flowchart LR
+  A[Insert card<br/>or choose folder] --> B[Review]
+  B --> C[Organize]
+  C --> D[Copy]
+  D --> E[Verify]
+  E --> F[Archive]
 
-## Development
+  B -.- B1["Counts · identity · destination preview"]
+  C -.- C1["Year / date / source folders"]
+  D -.- D1["Temp files · skip known-good"]
+  E -.- E1["SHA-256 match · atomic promote"]
+```
+
+1. **Detect** — Removable volumes are discovered automatically. You can also pick any folder manually.
+2. **Review** — Ingestarr scans the source, classifies files as new, known, ambiguous, or recoverable, and previews where media will land.
+3. **Organize** — Destination paths follow capture metadata (`year/date/source/filename`) with safe fallbacks when EXIF is missing.
+4. **Copy & verify** — Media streams into exclusive temporary files. Each copy is hashed and compared to the source before promotion. Verified duplicates are skipped.
+
+Turn on **Automatic mode** in the sidebar to ingest inserted cards without clicking Start.
+
+---
+
+## Features
+
+### Sources & ingest
+
+- Automatic detection of removable volumes (macOS, Windows, Linux adapters)
+- Sources tab with online/offline status, capacity-style media breakdown by capture date, and one-click Start
+- Source nicknames and durable identity (fingerprint, platform volume ID, on-card markers)
+- Manual folder ingest for any path on disk
+- Pre-ingest review with destination preview and per-date file selection
+- Configurable destination root, naming templates, extension allowlists, and path exclusions
+- Optional grouping by source nickname in the destination tree
+- Automatic ingest on card insert (when a destination is configured)
+- Live byte and file progress, cancellation, and desktop notifications
+
+### Safety & integrity
+
+- Copy-through-temporary-file with no-replace promotion
+- Independent SHA-256 verification of source and destination
+- Duplicate-aware skip only when a durable verified copy exists
+- Per-card plain-text event logs (optional)
+- Session manifests, structured logging, and crash-safe resume
+
+### Media library
+
+- EXIF and video metadata extraction with timezone-aware capture-date normalization
+- Date-grouped media summary with photo / video / source filters
+- Paginated results and lazy-loaded thumbnails (Sharp + FFmpeg)
+- Bounded thumbnail cache with retry and eviction policies
+
+### Security architecture
+
+- Sandboxed Electron renderer (`contextIsolation`, `nodeIntegration: false`)
+- Narrow typed `window.ingestarr` preload API — no raw IPC from the UI
+- Zod-validated request/response contracts on every IPC boundary
+- Content Security Policy in the renderer
+
+---
+
+## Quick start
 
 ### Requirements
 
-- Node.js 22.13.0 or newer
-- pnpm 11
-- macOS, Windows, or Linux for development (maker availability varies by host)
+- **Node.js** 22.13.0 or newer
+- **pnpm** 11
+- macOS, Windows, or Linux (packaging makers vary by host)
 
-### Setup
+### Run from source
 
 ```sh
+git clone git@github.com:S33G/ingestarr.git
+cd ingestarr
 pnpm install
 pnpm --filter @ingestarr/desktop dev
 ```
 
-### Commands
+### Quality checks
 
 ```sh
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build
-pnpm format:check
-pnpm --filter @ingestarr/desktop dev
 pnpm package
-pnpm --filter @ingestarr/desktop make
 ```
 
-Desktop `dev`, `package`, and `make` commands build required workspace packages automatically.
-`pnpm check:clean-desktop` removes generated outputs and verifies that packaging can recreate them
-from a clean artifact state.
+`pnpm test` runs 440+ unit, integration, and contract tests across the monorepo. Desktop
+`dev`, `package`, and `make` commands build required workspace packages automatically.
 
-### Workspace
+---
 
-- `apps/desktop`: Electron Forge application with Vite, React, and a typed preload boundary.
-- `packages/shared-types`: Zod-backed contracts shared across process and package boundaries.
-- `packages/ingest-core`: source scanning, classification, destination planning, copy verification,
-  and ingest orchestration.
-- `packages/metadata`: metadata normalization and photo/video thumbnail generation.
-- `packages/storage`: SQLite-backed persistence and summary queries.
-- `packages/platform`: host filesystem and manual-source adapters.
+## Repository layout
 
-See [architecture](docs/architecture.md) and [design notes](docs/design.md) for boundary decisions,
-and [acceptance and QA](docs/acceptance.md) for the acceptance matrix, limitations, recovery
-behavior, and installation instructions.
+```text
+ingestarr/
+├── apps/desktop/          Electron + React UI, IPC handlers, ingest orchestration
+├── packages/
+│   ├── shared-types/      Zod schemas and TypeScript contracts
+│   ├── ingest-core/       Scan, classify, plan, copy, verify, resume
+│   ├── metadata/          EXIF/video metadata and thumbnails
+│   ├── storage/           SQLite persistence, summaries, migrations
+│   └── platform/          Host filesystem and removable-volume adapters
+└── docs/                  Architecture, acceptance matrix, design notes
+```
+
+| Package | Responsibility |
+| --- | --- |
+| `@ingestarr/desktop` | Electron shell, renderer, controller, detected-source polling |
+| `@ingestarr/shared-types` | IPC and domain contracts (single source of truth) |
+| `@ingestarr/ingest-core` | Ingest workflow policy and file operations |
+| `@ingestarr/metadata` | ExifTool client, capture-date normalization, thumbnails |
+| `@ingestarr/storage` | Manifests, source registry, summary queries |
+| `@ingestarr/platform` | macOS / Windows / Linux volume and path adapters |
+
+Deeper reading: [architecture](docs/architecture.md) · [design notes](docs/design.md) ·
+[acceptance & QA](docs/acceptance.md)
+
+---
+
+## Roadmap
+
+Shipped in the codebase but still maturing:
+
+- Richer collision policies (prompt, rename, replace) beyond verified skip
+- Code signing, notarization, and distributable release artifacts
+- GPL/FFmpeg compliance automation for thumbnail packaging
+- Broader format controls and creator-workflow polish
+
+Roadmap items are direction, not release commitments.
+
+---
 
 ## Project status
 
-Ingestarr is an early-stage project. The repository contains a working desktop ingest workflow,
-but there are no release downloads or production-support guarantees yet. Expect interfaces and
-storage details to change as the project matures.
+Ingestarr has a working end-to-end desktop ingest workflow with automated tests and packaged
+smoke checks, but it is **not** a supported production release:
+
+- **No downloads** — build from source or run `pnpm package` locally.
+- **Unsigned builds** — expect Gatekeeper / SmartScreen warnings.
+- **Distribution blocker** — packaged thumbnails bundle GPL FFmpeg; see
+  [third-party media dependencies](docs/third-party-media.md) before redistributing artifacts.
+
+Contributions and issue reports are welcome while the project finds its footing.
+
+---
+
+<p align="center">
+  <sub>Built for creators who would rather verify twice than lose a shot once.</sub>
+</p>
