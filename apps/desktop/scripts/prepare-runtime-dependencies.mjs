@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -39,6 +39,16 @@ function assertSpawned(result, label) {
   }
 }
 
+async function copyIfPresent(source, destination) {
+  try {
+    await access(source);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return;
+    throw error;
+  }
+  await copyFile(source, destination);
+}
+
 const result = runPnpm([
   '--filter',
   '@ingestarr/desktop',
@@ -74,17 +84,19 @@ const ffmpegVersion =
   spawnSync(ffmpegBinary, ['-version'], { encoding: 'utf8', shell: false })
     .stdout.split(/\r?\n/)[0]
     ?.trim() || 'unavailable';
+// ffmpeg-static writes platform sidecars next to the binary: `ffmpeg.LICENSE` on Unix and
+// `ffmpeg.exe.LICENSE` on Windows. The install step warns (not fails) when those downloads 404.
 await Promise.all([
-  copyFile(
+  copyIfPresent(
     path.join(ffmpegPackage, 'LICENSE'),
     path.join(noticeRoot, 'FFmpeg-GPL-3.0-or-later.txt'),
   ),
-  copyFile(
-    path.join(ffmpegPackage, 'ffmpeg.LICENSE'),
+  copyIfPresent(
+    `${ffmpegBinary}.LICENSE`,
     path.join(noticeRoot, 'FFmpeg-BUILD-LICENSE-NOTICE.txt'),
   ),
-  copyFile(
-    path.join(ffmpegPackage, 'ffmpeg.README'),
+  copyIfPresent(
+    `${ffmpegBinary}.README`,
     path.join(noticeRoot, 'FFmpeg-BINARY-README.txt'),
   ),
   writeFile(
