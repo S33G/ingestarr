@@ -12,30 +12,45 @@ const noticeRoot = path.join(tmpdir(), 'Ingestarr Third-Party Notices');
 
 await rm(deployRoot, { recursive: true, force: true });
 await rm(noticeRoot, { recursive: true, force: true });
-const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-const result = spawnSync(
-  pnpm,
-  [
-    '--filter',
-    '@ingestarr/desktop',
-    'deploy',
-    '--prod',
-    '--prefer-offline',
-    '--legacy',
-    deployRoot,
-  ],
-  {
+
+// Invoke pnpm through the current Node executable and pnpm's own entry script (exposed as
+// `npm_execpath` when this runs under a pnpm script). This avoids Node 22's refusal to spawn
+// `pnpm.cmd` on Windows without a shell (CVE-2024-27980 hardening) and sidesteps shell quoting
+// for paths that may contain spaces. Falls back to the platform pnpm binary via a shell when the
+// entry script is unavailable (e.g. run outside a pnpm script context).
+const pnpmExecPath = process.env.npm_execpath;
+function runPnpm(args, extraEnv) {
+  const options = {
     cwd: repositoryRoot,
     encoding: 'utf8',
     stdio: 'inherit',
-  },
-);
-const restored = spawnSync(pnpm, ['install', '--offline', '--frozen-lockfile'], {
-  cwd: repositoryRoot,
-  encoding: 'utf8',
-  env: { ...process.env, CI: 'true' },
-  stdio: 'inherit',
-});
+    ...(extraEnv === undefined ? {} : { env: { ...process.env, ...extraEnv } }),
+  };
+  if (pnpmExecPath !== undefined && pnpmExecPath !== '') {
+    return spawnSync(process.execPath, [pnpmExecPath, ...args], options);
+  }
+  const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+  return spawnSync(pnpm, args, { ...options, shell: process.platform === 'win32' });
+}
+
+function assertSpawned(result, label) {
+  if (result.error !== undefined && result.error !== null) {
+    throw new Error(`${label} could not be launched: ${result.error.message}`);
+  }
+}
+
+const result = runPnpm([
+  '--filter',
+  '@ingestarr/desktop',
+  'deploy',
+  '--prod',
+  '--prefer-offline',
+  '--legacy',
+  deployRoot,
+]);
+assertSpawned(result, 'Desktop runtime dependency deployment');
+const restored = runPnpm(['install', '--offline', '--frozen-lockfile'], { CI: 'true' });
+assertSpawned(restored, 'Workspace dependency state restoration');
 if (result.status !== 0) {
   await rm(deployRoot, { recursive: true, force: true });
   throw new Error(`Desktop runtime dependency deployment failed (${String(result.status)})`);

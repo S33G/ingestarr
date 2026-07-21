@@ -33,7 +33,23 @@ const config: ForgeConfig = {
     },
   },
   rebuildConfig: {},
-  makers: [new MakerZIP({}, ['darwin']), new MakerSquirrel({}), new MakerDeb({})],
+  makers: [
+    new MakerZIP({}, ['darwin']),
+    new MakerSquirrel({}),
+    // electron-installer-debian requires a maintainer and homepage; without them (the desktop
+    // package.json declares no `author`/`homepage`) the Linux `make` fails. Provide them here.
+    new MakerDeb({
+      options: {
+        name: 'ingestarr',
+        productName: 'Ingestarr',
+        genericName: 'Media Ingest',
+        maintainer: 'Ingestarr Project',
+        homepage: 'https://github.com/S33G/ingestarr',
+        description: 'Local-first desktop app for safely ingesting media from cameras and SD cards.',
+        categories: ['Utility', 'Graphics'],
+      },
+    }),
+  ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new VitePlugin({
