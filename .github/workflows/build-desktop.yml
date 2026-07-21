@@ -1,0 +1,107 @@
+name: Build desktop
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: desktop-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS
+          - os: windows-latest
+            name: Windows
+          - os: ubuntu-latest
+            name: Linux
+
+    env:
+      # Unsigned local/CI builds — do not attempt code signing or notarization.
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Cache Electron downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/Library/Caches/electron
+            ~/AppData/Local/electron/Cache
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            electron-${{ runner.os }}-
+
+      - name: Install Linux packaging dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            fakeroot \
+            rpm \
+            xvfb \
+            libgtk-3-0 \
+            libnotify4 \
+            libnss3 \
+            libxss1 \
+            libxtst6 \
+            xauth \
+            libasound2t64 || sudo apt-get install -y libasound2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build installers
+        run: pnpm --filter @ingestarr/desktop make
+
+      - name: Smoke packaged native modules
+        run: pnpm --filter @ingestarr/desktop smoke:native
+
+      - name: Smoke packaged launch (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a pnpm --filter @ingestarr/desktop smoke:launch
+
+      - name: Smoke packaged launch (macOS)
+        if: runner.os == 'macOS'
+        run: pnpm --filter @ingestarr/desktop smoke:launch
+
+      - name: Smoke packaged launch (Windows)
+        if: runner.os == 'Windows'
+        run: pnpm --filter @ingestarr/desktop smoke:launch
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: ingestarr-${{ matrix.name }}
+          path: |
+            apps/desktop/out/make/**
+          if-no-files-found: error
+          retention-days: 14

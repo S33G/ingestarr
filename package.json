@@ -12,7 +12,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
+    "make": "pnpm --filter @ingestarr/desktop make",
     "package": "pnpm --filter @ingestarr/desktop package",
+    "screenshots:readme": "node scripts/capture-readme-screenshots.mjs",
     "pretest": "pnpm --filter @ingestarr/desktop rebuild:native:node",
     "test": "pnpm --filter @ingestarr/shared-types test:built && vitest run",
     "typecheck": "pnpm --filter './packages/*' build && pnpm -r typecheck"
@@ -24,6 +26,7 @@
     "eslint-config-prettier": "latest",
     "globals": "latest",
     "prettier": "latest",
+    "playwright": "latest",
     "typescript": "^6.0.3",
     "typescript-eslint": "latest",
     "vitest": "latest"

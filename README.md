@@ -1,5 +1,8 @@
 # Ingestarr
 
+[![CI](https://github.com/S33G/ingestarr/actions/workflows/ci.yml/badge.svg)](https://github.com/S33G/ingestarr/actions/workflows/ci.yml)
+[![Build desktop](https://github.com/S33G/ingestarr/actions/workflows/build-desktop.yml/badge.svg)](https://github.com/S33G/ingestarr/actions/workflows/build-desktop.yml)
+
 **Bring your media home — safely.**
 
 Ingestarr is a local-first desktop app for photographers, videographers, and anyone who moves
@@ -9,6 +12,16 @@ verified, and independently checksums every byte that lands on disk.
 
 > **Early stage.** Ingestarr is under active development. There are no release downloads yet,
 > interfaces may change, and builds are unsigned. See [Project status](#project-status).
+
+## Screenshots
+
+_Mock data — representative of the desktop UI._
+
+| Sources | Review |
+| --- | --- |
+| ![Sources tab with capacity breakdown by capture date](docs/screenshots/sources.png) | ![Review screen with per-date media selection](docs/screenshots/review.png) |
+
+![Live ingest progress with throughput and verification stats](docs/screenshots/progress.png)
 
 ---
 
@@ -115,6 +128,33 @@ pnpm package
 
 `pnpm test` runs 440+ unit, integration, and contract tests across the monorepo. Desktop
 `dev`, `package`, and `make` commands build required workspace packages automatically.
+
+Regenerate README screenshots (Playwright + mock API):
+
+```sh
+pnpm screenshots:readme
+```
+
+### CI builds
+
+GitHub Actions builds unsigned installers on every push and pull request:
+
+| Platform | Workflow runner | Maker output |
+| --- | --- | --- |
+| macOS | `macos-latest` | ZIP (`MakerZIP`) |
+| Windows | `windows-latest` | Squirrel installer (`MakerSquirrel`) |
+| Linux | `ubuntu-latest` | Debian package (`MakerDeb`) |
+
+Workflows live in [`.github/workflows/`](.github/workflows/). Download build artifacts from the
+**Build desktop** workflow run (retained for 14 days). Artifacts are unsigned and must not be
+redistributed until the FFmpeg/GPL blocker in [third-party media dependencies](docs/third-party-media.md)
+is resolved.
+
+To reproduce a release build locally:
+
+```sh
+pnpm make
+```
 
 ---
 
